@@ -352,6 +352,31 @@ class TestCfgNodeSubclass(unittest.TestCase):
         assert cfg.MODEL.TYPE == s
 
 
+# Added regression coverage for integer-key dumping and validation diagnostics.
+class TestDumpIntegerKeys(unittest.TestCase):
+    def test_dump_preserves_integer_and_string_keys(self):
+        cfg = CN()
+        cfg.NESTED = CN()
+        cfg.NESTED[1] = "integer"
+        cfg.NESTED["1"] = "string"
+        before = cfg.clone()
+
+        dumped = yaml.safe_load(cfg.dump())
+
+        self.assertEqual(dumped, {"NESTED": {1: "integer", "1": "string"}})
+        self.assertEqual(cfg, before)
+
+    def test_invalid_value_reports_integer_key_path(self):
+        cfg = CN()
+        cfg.NESTED = CN()
+        cfg.NESTED[1] = set()
+
+        with self.assertRaises(AssertionError) as error:
+            cfg.dump()
+
+        self.assertIn("NESTED.1", str(error.exception))
+
+
 if __name__ == "__main__":
     logging.basicConfig()
     yacs_logger = logging.getLogger("yacs.config")
